@@ -1,0 +1,37 @@
+pipeline {
+    agent: any
+
+    stages {
+        stage("Checkout") {
+
+        }
+
+        stage("Static Analysis") {
+
+        }
+
+        stage("Build") {
+
+        }
+
+        stage("Test") {
+
+        }
+
+        stage("Deploy"){
+
+        }
+    }
+
+    post {
+        always {
+            echo "Finished"
+        }
+        success {
+            echo "Success"
+        }
+        error {
+            echo "Error"
+        }
+    }
+}
