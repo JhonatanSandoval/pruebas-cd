@@ -1,0 +1,27 @@
+import config.Config
+import dependencies.Deps
+
+jacoco {
+    toolVersion = Deps.jacocoCoreVersion
+    reportsDir = file("$project.buildDir/$Config.TestOptions.reportsDir")
+}
+
+tasks.withType(Test) {
+    jacoco.includeNoLocationClasses = Config.TestOptions.includeNoLocationClasses
+}
+
+task jacocoTestReport(type: JacocoReport, dependsOn: ["testDevelopUnitTest"]) {
+
+    reports {
+        xml.enabled = Config.TestOptions.xml
+        html.enabled = Config.TestOptions.html
+    }
+
+    def fileFilter = Config.TestOptions.filters
+    def developTree = fileTree(dir: "$project.buildDir/tmp/kotlin-classes/develop", excludes: fileFilter)
+    def mainSrc = "$project.projectDir/src/main/kotlin"
+
+    sourceDirectories = files([mainSrc])
+    classDirectories = files([developTree])
+    executionData = fileTree(dir: project.buildDir, includes: Config.TestOptions.executionData)
+}

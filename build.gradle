@@ -1,0 +1,37 @@
+import dependencies.Deps
+import config.Config
+
+buildscript {
+    repositories {
+        google()
+        jcenter()
+    }
+
+    dependencies {
+        classpath Deps.BuildPlugins.androidGradle
+        classpath Deps.BuildPlugins.kotlinGradlePlugin
+        classpath Deps.BuildPlugins.easyLauncherPlugin
+        classpath Deps.BuildPlugins.jacocoCore
+    }
+}
+
+plugins {
+    id "com.gradle.build-scan" version "1.16"
+}
+
+buildScan {
+    termsOfServiceUrl = Config.Build.scanTerms
+    termsOfServiceAgree = Config.Build.scanTermsAgree
+}
+
+allprojects {
+    repositories {
+        google()
+        jcenter()
+        maven { url "https://oss.sonatype.org/content/repositories/releases" }
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

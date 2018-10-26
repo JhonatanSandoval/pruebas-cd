@@ -1,0 +1,179 @@
+import dependencies.Deps
+import config.Config
+
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "kotlin-android-extensions"
+    id "com.akaita.android.easylauncher"
+    id "jacoco"
+}
+
+apply from: "$project.rootDir/tools/jacoco.gradle"
+
+android {
+    compileSdkVersion Config.App.compileSdkVersion
+
+    testBuildType Config.App.testBuildType
+
+    defaultConfig {
+        applicationId Config.App.applicationId
+        minSdkVersion Config.App.minSdkVersion
+        targetSdkVersion Config.App.targetSdkVersion
+        versionCode Config.App.versionCode
+        versionName Config.App.versionName
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+        multiDexEnabled Config.App.multiDexEnabled
+        vectorDrawables.useSupportLibrary Config.App.useSupportLibrary
+    }
+
+    splits {
+        abi {
+            enable Config.Abi.enable
+            reset()
+            include Config.Abi.includes
+            universalApk Config.Abi.universalApk
+        }
+    }
+
+    bundle {
+        language {
+            enableSplit Config.Language.enable
+        }
+    }
+
+    packagingOptions {
+        excludes -= Config.Packaging.excludes
+    }
+
+    lintOptions {
+        quiet Config.Lint.quiet
+        abortOnError Config.Lint.abortOnError
+        ignoreWarnings Config.Lint.ignoreWarnings
+        checkAllWarnings Config.Lint.checkAllWarnings
+        warningsAsErrors Config.Lint.warningsAsErrors
+        noLines Config.Lint.noLines
+        showAll Config.Lint.showAll
+
+        lintConfig rootProject.file(Config.Lint.file)
+        xmlOutput file("$project.buildDir/$Config.Lint.xmlOutput")
+        htmlOutput file("$project.buildDir/$Config.Lint.htmlOutput")
+    }
+
+    signingConfigs {
+        def env = new Properties()
+
+        env.load(new FileInputStream(rootProject.file(Config.SigningConfigs.env)))
+
+        ci {
+            storeFile rootProject.file(env[Config.SigningConfigs.storeFile])
+            storePassword env[Config.SigningConfigs.storePassword]
+            keyAlias env[Config.SigningConfigs.keyAlias]
+            keyPassword env[Config.SigningConfigs.keyPassword]
+        }
+    }
+
+    buildTypes {
+        develop {
+            applicationIdSuffix Config.BuildTypes.Develop.appIdSuffix
+            versionNameSuffix Config.BuildTypes.Develop.versionSuffix
+
+            debuggable Config.BuildTypes.Develop.debuggable
+            shrinkResources Config.BuildTypes.Develop.shrinkResources
+            minifyEnabled Config.BuildTypes.Develop.minify
+            testCoverageEnabled Config.BuildTypes.Develop.testCoverageEnabled
+
+            signingConfig signingConfigs.ci
+
+            manifestPlaceholders = [app_name: Config.App.name, prefix: "${Config.BuildTypes.Develop.label} "]
+        }
+
+        stage {
+            applicationIdSuffix Config.BuildTypes.Stage.appIdSuffix
+            versionNameSuffix Config.BuildTypes.Stage.versionSuffix
+
+            debuggable Config.BuildTypes.Stage.debuggable
+            shrinkResources Config.BuildTypes.Stage.shrinkResources
+            minifyEnabled Config.BuildTypes.Stage.minify
+
+            signingConfig signingConfigs.ci
+
+            manifestPlaceholders = [app_name: Config.App.name, prefix: "${Config.BuildTypes.Stage.label} "]
+        }
+
+        release {
+            applicationIdSuffix Config.BuildTypes.Release.appIdSuffix
+            versionNameSuffix Config.BuildTypes.Release.versionSuffix
+
+            debuggable Config.BuildTypes.Release.debuggable
+            shrinkResources Config.BuildTypes.Release.shrinkResources
+            minifyEnabled Config.BuildTypes.Release.minify
+
+            signingConfig signingConfigs.ci
+
+            manifestPlaceholders = [app_name: Config.App.name, prefix: Config.BuildTypes.Release.label]
+
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+        }
+    }
+
+    testOptions {
+        execution Config.TestOptions.execution
+        animationsDisabled Config.TestOptions.animationsDisabled
+        unitTests {
+            includeAndroidResources = Config.TestOptions.includeAndroidResources
+        }
+    }
+
+    variantFilter { variant ->
+        if (variant.buildType.name == "debug")
+            setIgnore(true)
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def project = Config.App.name
+            def architecture = output.filters[0].identifier
+            def buildType = variant.variantData.variantConfiguration.buildType.name
+            def version = variant.versionName
+
+            outputFileName = "${project}-${architecture}-${buildType}-${version}.apk"
+        }
+    }
+
+    sourceSets {
+        main.java.srcDirs += "src/main/kotlin"
+        test.java.srcDirs += "src/test/kotlin"
+        androidTest.java.srcDirs += "src/androidTest/kotlin"
+    }
+}
+
+easylauncher {
+    buildTypes {
+        develop {
+            filters = [customColorRibbonFilter(Config.BuildTypes.Develop.label, Config.BuildTypes.Develop.color)]
+        }
+        stage {
+            filters = [customColorRibbonFilter(Config.BuildTypes.Stage.label, Config.BuildTypes.Stage.color)]
+        }
+        release {
+            enable Config.BuildTypes.Release.colorEnable
+        }
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+
+    implementation Deps.Libs.kotlinStd
+    implementation Deps.Libs.appcompat
+    implementation Deps.Libs.constraintLayout
+    implementation Deps.Libs.multidex
+
+    testImplementation Deps.TestLibs.junit
+    testImplementation Deps.TestLibs.roboelectric
+    androidTestImplementation Deps.TestLibs.runner
+    androidTestImplementation Deps.TestLibs.espresso
+}
